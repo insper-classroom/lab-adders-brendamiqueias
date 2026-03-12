@@ -26,8 +26,8 @@ def halfAdder(a, b, soma, carry):
     """
     @always_comb
     def comb():
-        pass
-
+        soma.next = a ^ b
+        carry.next = a & b
     return instances()
 
 
@@ -44,8 +44,8 @@ def fullAdder(a, b, c, soma, carry):
     """
     @always_comb
     def comb():
-        pass
-
+        soma.next = a ^ b ^ c
+        carry.next = (a & b) | (c & (a ^ b)) 
     return instances()
 
 
@@ -62,22 +62,51 @@ def adder2bits(x, y, soma, carry):
         soma: Vetor de saida de 2 bits.
         carry: Carry de saida.
     """
+    c1 = Signal(bool(0)) 
+
+    fa0 = fullAdder(
+        a=x[0],
+        b=y[0],
+        c=0,
+        soma=soma[0],
+        carry=c1)
+
+    fa1 = fullAdder(
+        a=x[1],
+        b=y[1],
+        c=c1,
+        soma=soma[1],
+        carry=carry)
     return instances()
+
 
 
 @block
 def adder(x, y, soma, carry):
-    """Somador generico para vetores de mesmo tamanho.
 
-    Implementacao esperada por ripple-carry (encadeamento de carries)
-    usando celulas de full adder.
+    n = len(x)
 
-    Args:
-        x: Vetor de entrada.
-        y: Vetor de entrada.
-        soma: Vetor de saida com mesma largura de x/y.
-        carry: Carry de saida mais significativo.
-    """
+    # carries internos (n-1 apenas)
+    carries = [Signal(bool(0)) for _ in range(n-1)]
+    faList = [None for _ in range(n)]
+    for i in range(n):
+
+        if i == 0:
+            cin = Signal(bool(0))   # carry inicial
+        else:
+            cin = carries[i-1]
+
+        if i == n-1:
+            cout = carry            # último vai para carry final
+        else:
+            cout = carries[i]
+
+        faList[i] = fullAdder(
+            a=x[i],
+            b=y[i],
+            c=cin,
+            soma=soma[i],
+            carry=cout)
     return instances()
 
 
@@ -96,6 +125,9 @@ def addervb(x, y, soma, carry):
     """
     @always_comb
     def comb():
-        pass
-
+        n = len(soma)
+        result = intbv(0)[n+1:]
+        result[:] = x + y
+        soma.next = result[n:0]
+        carry.next = result[n]
     return instances()
